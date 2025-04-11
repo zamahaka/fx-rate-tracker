@@ -2,7 +2,6 @@
 
 package com.example.fxratetracker.presentation.ui.components
 
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -16,7 +15,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSearchBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.tooling.preview.Preview
@@ -27,6 +25,7 @@ fun TopAppBarSearch(
     onQueryChange: (String) -> Unit,
     onClearQuery: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     SearchBar(
         state = rememberSearchBarState(),
@@ -42,6 +41,7 @@ fun TopAppBarSearch(
                     onSearch = onQueryChange,
                     expanded = false,
                     onExpandedChange = {},
+                    enabled = enabled,
                     placeholder = { Text("Search assets") },
                     trailingIcon = {
                         if (query.isNotEmpty()) {
