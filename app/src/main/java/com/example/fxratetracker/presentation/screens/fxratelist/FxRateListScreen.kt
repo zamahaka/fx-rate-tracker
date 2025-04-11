@@ -1,6 +1,5 @@
 package com.example.fxratetracker.presentation.screens.fxratelist
 
-import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -181,7 +180,7 @@ fun FxRateListScreenUi(
                 val text = buildAnnotatedString {
                     when (val rs = state.autorefreshState) {
                         is AutorefreshState.Failed -> {
-                            append("Auto refresh failed.")
+                            append("Auto refresh failed. Displaying stale data.")
                             append(" ")
                             withLink(LinkAnnotation.Clickable("refresh") {
                                 state.eventSink(RestartAutorefresh)
