@@ -27,3 +27,10 @@ Use root [local.properties](./local.properties) to provide required configuratio
 - exchangerate.host updates own data on hourly basis.
   Application will still fetch exchange rates with period of provided `fxrate.refresh.period`.
   Beware, exchange rates will not visually change, unless api responds with different data.
+
+## Examples
+<p float="left">
+<img src="examples/exchange-list.png" alt="MDN Web Docs logo" width="320" />
+<img src="examples/assets-selection.png" alt="MDN Web Docs logo" width="320" />
+<img src="examples/assets-filtering.png" alt="MDN Web Docs logo" width="320" />
+</p>
