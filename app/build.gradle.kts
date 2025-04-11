@@ -33,6 +33,12 @@ android {
             "Api key was not provided. Update your root local.properies with non-empty api.key"
         }
         buildConfigField("String", "API_KEY", "\"$apiKey\"")
+
+        val fxRateListRefreshPeriod = properties.getProperty("fxrate.refresh.period").toIntOrNull()
+        require(fxRateListRefreshPeriod != null && fxRateListRefreshPeriod > 0) {
+            "Valid fx rate refresh period was not provided. Update your root local.properies with valid positive integer value"
+        }
+        buildConfigField("int", "FX_RATE_REFRESH_PERIOD_SECONDS", "$fxRateListRefreshPeriod")
     }
 
     buildTypes {

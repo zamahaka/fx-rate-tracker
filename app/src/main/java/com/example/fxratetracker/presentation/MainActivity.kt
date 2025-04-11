@@ -55,6 +55,8 @@ private const val API_KEY_NAME = "access_key"
 // Ideally api that requires api key usage should be proxied.
 private const val API_KEY = BuildConfig.API_KEY
 
+private val FX_RATE_REFRESH_PERIOD = BuildConfig.FX_RATE_REFRESH_PERIOD_SECONDS.seconds
+
 private val Context.dataStore by preferencesDataStore(name = "store")
 
 class MainActivity : ComponentActivity() {
@@ -82,8 +84,7 @@ class MainActivity : ComponentActivity() {
             selectedAssetsRepository, assetsRepository, fxRepository
         )
         val autorefreshSelectedFxRates = AutorefreshSelectedFxRates(
-            Dispatchers.IO,
-            period = 3.seconds,
+            Dispatchers.IO, FX_RATE_REFRESH_PERIOD,
             fxRepository, selectedAssetsRepository,
         )
 
