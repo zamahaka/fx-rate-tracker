@@ -29,6 +29,9 @@ android {
         // Ideally api that requires api key usage should be proxied.
         val properties = gradleLocalProperties(rootDir, providers)
         val apiKey = properties.getProperty("api.key")
+        require(!apiKey.isNullOrBlank()) {
+            "Api key was not provided. Update your root local.properies with non-empty api.key"
+        }
         buildConfigField("String", "API_KEY", "\"$apiKey\"")
     }
 
