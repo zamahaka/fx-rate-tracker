@@ -91,8 +91,7 @@ class MainActivity : ComponentActivity() {
         val circuit = Circuit.Builder()
             .addPresenterFactory(
                 FxRateListPresenter.Factory(
-                    observeSelectedFxRates,
-                    autorefreshSelectedFxRates,
+                    observeSelectedFxRates, autorefreshSelectedFxRates, selectedAssetsRepository
                 )
             )
             .addUi<FxRateListScreen, FxRateListScreen.State> { state, modifier ->

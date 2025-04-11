@@ -6,6 +6,7 @@ Features 2 screens:
   - List of selected exchange rates
   - Automatic refresh
   - Indication of last successful refresh or failure
+  - Swipe to delete
 - Settings screen with all available assets.
   - List of all available assets
   - Assets can be checked to add them to exchange rate list
@@ -19,7 +20,7 @@ Data is cached to local storage, using [data store](https://developer.android.co
 
 ## Configuration
 Use root [local.properties](./local.properties) to provide required configuration.
-- `api.key to provide` exchangerate.host access_key
+- `api.key` to provide exchangerate.host access_key
 - `fxrate.refresh.period` to provide exchange rate refresh frequency in seconds
 
 ## Assumptions

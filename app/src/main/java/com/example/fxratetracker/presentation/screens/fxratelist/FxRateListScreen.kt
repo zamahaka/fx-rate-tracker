@@ -35,14 +35,17 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import com.example.fxratetracker.domain.model.FxRate
+import com.example.fxratetracker.domain.repository.SelectedAssetsRepository
 import com.example.fxratetracker.domain.usecase.AutorefreshSelectedFxRates
 import com.example.fxratetracker.domain.usecase.ObserveSelectedFxRates
 import com.example.fxratetracker.presentation.screens.fxratelist.FxRateListScreen.AutorefreshState
+import com.example.fxratetracker.presentation.screens.fxratelist.FxRateListScreen.Event.RemoveRate
 import com.example.fxratetracker.presentation.screens.fxratelist.FxRateListScreen.Event.RestartAutorefresh
 import com.example.fxratetracker.presentation.screens.fxratelist.FxRateListScreen.Event.SelectAssets
 import com.example.fxratetracker.presentation.screens.selectassets.SelectAssetsScreen
 import com.example.fxratetracker.presentation.ui.circuit.wrapEventSink
 import com.example.fxratetracker.presentation.ui.components.FxRateItem
+import com.example.fxratetracker.presentation.ui.components.SwipeToDeleteContainer
 import com.example.fxratetracker.presentation.ui.preview.FxRateListPreviewParameterProvider
 import com.slack.circuit.retained.collectAsRetainedState
 import com.slack.circuit.runtime.CircuitContext
@@ -51,6 +54,7 @@ import com.slack.circuit.runtime.CircuitUiState
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
 import com.slack.circuit.runtime.screen.Screen
+import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
 import java.time.LocalDateTime
 
@@ -71,6 +75,7 @@ data object FxRateListScreen : Screen {
     sealed interface Event : CircuitUiEvent {
         data object SelectAssets : Event
         data object RestartAutorefresh : Event
+        data class RemoveRate(val rate: FxRate) : Event
     }
 }
 
@@ -78,22 +83,28 @@ class FxRateListPresenter(
     private val navigator: Navigator,
     private val observeSelectedRates: ObserveSelectedFxRates,
     private val autorefreshSelectedFxRates: AutorefreshSelectedFxRates,
+    private val selectedAssetsRepository: SelectedAssetsRepository,
 ) : Presenter<FxRateListScreen.State> {
 
 
     @Composable
     override fun present(): FxRateListScreen.State {
         var autorefreshGeneration by remember { mutableIntStateOf(0) }
-        val autoRefreshState by remember(autorefreshGeneration) { autorefreshSelectedFxRates() }
-            .collectAsRetainedState(AutorefreshSelectedFxRates.State.Stale)
+        val autoRefreshState by remember(autorefreshGeneration) { autorefreshSelectedFxRates() }.collectAsRetainedState(
+            AutorefreshSelectedFxRates.State.Stale
+        )
 
-        val rates by remember { observeSelectedRates() }
-            .collectAsRetainedState(emptyList())
+        val rates by remember { observeSelectedRates() }.collectAsRetainedState(emptyList())
 
         val eventSink = wrapEventSink { event: FxRateListScreen.Event ->
             when (event) {
                 SelectAssets -> navigator.goTo(SelectAssetsScreen)
                 RestartAutorefresh -> autorefreshGeneration++
+                is RemoveRate -> launch {
+                    selectedAssetsRepository.saveAssetSelected(
+                        event.rate.referenceAsset.code, false
+                    )
+                }
             }
         }
 
@@ -113,6 +124,7 @@ class FxRateListPresenter(
     class Factory(
         private val observeSelectedRates: ObserveSelectedFxRates,
         private val autorefreshSelectedFxRates: AutorefreshSelectedFxRates,
+        private val selectedAssetsRepository: SelectedAssetsRepository,
     ) : Presenter.Factory {
         override fun create(
             screen: Screen,
@@ -123,6 +135,7 @@ class FxRateListPresenter(
                 FxRateListScreen -> FxRateListPresenter(
                     navigator,
                     observeSelectedRates, autorefreshSelectedFxRates,
+                    selectedAssetsRepository,
                 )
 
                 else -> null
@@ -158,10 +171,9 @@ fun FxRateListScreenUi(
         ),
         modifier = modifier,
     ) { innerPadding ->
-        val navigationBarHeight = ScaffoldDefaults.contentWindowInsets
-            .only(WindowInsetsSides.Bottom)
-            .asPaddingValues()
-            .calculateBottomPadding()
+        val navigationBarHeight =
+            ScaffoldDefaults.contentWindowInsets.only(WindowInsetsSides.Bottom).asPaddingValues()
+                .calculateBottomPadding()
         val listOffset = 8.dp
 
         LazyColumn(
@@ -203,14 +215,19 @@ fun FxRateListScreenUi(
                     modifier = Modifier.animateItem(),
                 )
             }
+
             items(
                 state.fxRates,
-                key = { "${it.baseAsset.code}${it.referenceAsset.code}" }
+                key = { "${it.baseAsset.code}${it.referenceAsset.code}" },
             ) { fxRate ->
-                FxRateItem(
-                    fxRate = fxRate,
-                    modifier = Modifier.animateItem(),
-                )
+                SwipeToDeleteContainer(
+                    onDelete = { state.eventSink(RemoveRate(fxRate)) },
+                    modifier = Modifier.animateItem()
+                ) {
+                    FxRateItem(
+                        fxRate = fxRate,
+                    )
+                }
             }
         }
     }
@@ -219,8 +236,7 @@ fun FxRateListScreenUi(
 @Preview(showSystemUi = true)
 @Composable
 private fun PreviewFxRateListScreenUi(
-    @PreviewParameter(FxRateListPreviewParameterProvider::class, limit = 1)
-    fxRates: List<FxRate>,
+    @PreviewParameter(FxRateListPreviewParameterProvider::class, limit = 1) fxRates: List<FxRate>,
 ) {
     FxRateListScreenUi(
         state = FxRateListScreen.State(
