@@ -84,7 +84,6 @@ class FxRateListPresenter(
 
     @Composable
     override fun present(): FxRateListScreen.State {
-        Log.d("myLog", "present: recomposing")
         var autorefreshGeneration by remember { mutableIntStateOf(0) }
         val autoRefreshState by remember(autorefreshGeneration) { autorefreshSelectedFxRates() }
             .collectAsRetainedState(AutorefreshSelectedFxRates.State.Stale)
