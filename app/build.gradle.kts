@@ -83,6 +83,7 @@ dependencies {
     implementation(libs.squareup.retrofit)
     implementation(libs.squareup.retrofit.converter.ktx.serialization)
     implementation(libs.ktx.serialization.json)
+    implementation(libs.arrow.core)
 
     testImplementation(libs.junit)
 
