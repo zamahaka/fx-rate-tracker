@@ -1,14 +1,25 @@
+@file:OptIn(ExperimentalFoundationApi::class)
+
 package com.example.fxratetracker.presentation.screens.fxratelist
 
+import androidx.compose.animation.core.exponentialDecay
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.AnchoredDraggableState
+import androidx.compose.foundation.gestures.DraggableAnchors
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.anchoredDraggable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -25,6 +36,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -33,6 +45,7 @@ import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.example.fxratetracker.domain.model.FxRate
 import com.example.fxratetracker.domain.usecase.AutorefreshSelectedFxRates
@@ -53,6 +66,7 @@ import com.slack.circuit.runtime.presenter.Presenter
 import com.slack.circuit.runtime.screen.Screen
 import kotlinx.parcelize.Parcelize
 import java.time.LocalDateTime
+import kotlin.math.roundToInt
 
 @Parcelize
 data object FxRateListScreen : Screen {
@@ -131,7 +145,7 @@ class FxRateListPresenter(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
 fun FxRateListScreenUi(
     state: FxRateListScreen.State,
@@ -207,14 +221,38 @@ fun FxRateListScreenUi(
                 state.fxRates,
                 key = { "${it.baseAsset.code}${it.referenceAsset.code}" }
             ) { fxRate ->
+                val density = LocalDensity.current
+                val anchors = DraggableAnchors {
+                    DragValue.Start at -250f
+                    DragValue.Center at 0f
+                    DragValue.End at 250f
+                }
+
+                val state = remember {
+                    AnchoredDraggableState(
+                        DragValue.Center,
+                        anchors,
+                        positionalThreshold = { it * 0.5f },
+                        velocityThreshold = { 300f },
+                        snapAnimationSpec = tween(),
+                        decayAnimationSpec = exponentialDecay(),
+                    )
+                }
+
                 FxRateItem(
                     fxRate = fxRate,
-                    modifier = Modifier.animateItem(),
+                    modifier = Modifier
+                        .animateItem()
+                        .anchoredDraggable(state, Orientation.Horizontal)
+                        .offset { IntOffset(state.requireOffset().roundToInt(), 0) }
                 )
             }
         }
     }
 }
+
+enum class DragValue { Start, Center, End }
+
 
 @Preview(showSystemUi = true)
 @Composable
