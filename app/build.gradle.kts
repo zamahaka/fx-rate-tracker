@@ -1,3 +1,5 @@
+import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -18,6 +20,16 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Yeah, yeah, this should not be stored in APK altogether.
+        // As just by decompiling apk and running string on it will show plain api key.
+        // We can obfuscate it, like storing string bytes and then recreating it,
+        // but it is a futile attempt, as anyone can deobfuscate it. Its just an extra step
+        //
+        // Ideally api that requires api key usage should be proxied.
+        val properties = gradleLocalProperties(rootDir, providers)
+        val apiKey = properties.getProperty("api.key")
+        buildConfigField("String", "API_KEY", "\"$apiKey\"")
     }
 
     buildTypes {
@@ -41,6 +53,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
