@@ -1,4 +1,4 @@
-package com.example.fxratetracker.ui.theme
+package com.example.fxratetracker.presentation.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
