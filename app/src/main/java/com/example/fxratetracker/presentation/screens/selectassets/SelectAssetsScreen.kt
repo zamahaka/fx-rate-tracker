@@ -247,7 +247,9 @@ fun SelectAssetsScreenUi(
                 }
             },
         ) { state ->
-            val innerModifier = Modifier.padding(innerPadding).fillMaxSize()
+            val innerModifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
             when (state) {
                 is SelectAssetsScreen.State.Loading -> RenderLoadingState(state, innerModifier)
                 is SelectAssetsScreen.State.Failed -> RenderFailedState(state, innerModifier)
@@ -333,7 +335,7 @@ private fun RenderLoadedState(
 
 @Preview(showSystemUi = true)
 @Composable
-private fun PreviewFxRateListScreenLoadedUi(
+private fun PreviewSelectAssetsScreenLoadedUi(
     @PreviewParameter(SelectableAssetListPreviewParameterProvider::class, limit = 1)
     assets: List<SelectableAsset>,
 ) {
@@ -348,10 +350,7 @@ private fun PreviewFxRateListScreenLoadedUi(
 
 @Preview(showSystemUi = true)
 @Composable
-private fun PreviewFxRateListScreenLoadingUi(
-    @PreviewParameter(SelectableAssetListPreviewParameterProvider::class, limit = 1)
-    assets: List<SelectableAsset>,
-) {
+private fun PreviewSelectAssetsScreenLoadingUi() {
     SelectAssetsScreenUi(
         state = SelectAssetsScreen.State.Loading(
             eventSink = {},
@@ -361,10 +360,7 @@ private fun PreviewFxRateListScreenLoadingUi(
 
 @Preview(showSystemUi = true)
 @Composable
-private fun PreviewFxRateListScreenFailedUi(
-    @PreviewParameter(SelectableAssetListPreviewParameterProvider::class, limit = 1)
-    assets: List<SelectableAsset>,
-) {
+private fun PreviewSelectAssetsScreenFailedUi() {
     SelectAssetsScreenUi(
         state = SelectAssetsScreen.State.Failed(
             eventSink = {},
