@@ -12,8 +12,8 @@ sealed interface RemoteFailure : Failure
 
 data class UnexpectedFailure(
     override val exception: Throwable,
-) : Failure
+) : Failure, LocalFailure, RemoteFailure
 
-inline fun <T> Either.Companion.catchUnexpected(action: () -> T): Either<Failure, T> {
+inline fun <T> Either.Companion.catchUnexpected(action: () -> T): Either<UnexpectedFailure, T> {
     return catch(action).mapLeft { UnexpectedFailure(it) }
 }
