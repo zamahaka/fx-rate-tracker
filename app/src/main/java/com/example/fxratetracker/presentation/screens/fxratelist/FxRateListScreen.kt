@@ -101,6 +101,7 @@ class FxRateListPresenter(
                 SelectAssets -> navigator.goTo(SelectAssetsScreen)
                 RestartAutorefresh -> autorefreshGeneration++
                 is RemoveRate -> launch {
+                    // TODO: Post message to the user
                     selectedAssetsRepository.saveAssetSelected(
                         event.rate.referenceAsset.code, false
                     )

@@ -135,6 +135,7 @@ class SelectAssetsPresenter(
         val eventSink = wrapEventSink { event: SelectAssetsScreen.Event ->
             when (event) {
                 is AssetSelectionChanged -> launch {
+                    // TODO: Post message to the user
                     selectedAssetsRepository.saveAssetSelected(
                         id = event.id,
                         isSelected = event.isSelected,

@@ -2,6 +2,7 @@ package com.example.fxratetracker.domain.usecase
 
 import android.util.Log
 import arrow.core.Either
+import arrow.core.flatMap
 import com.example.fxratetracker.domain.repository.FxRateRepository
 import com.example.fxratetracker.domain.repository.SelectedAssetsRepository
 import kotlinx.coroutines.CoroutineDispatcher
@@ -36,9 +37,10 @@ class AutorefreshSelectedFxRates(
         emit(State.Stale)
 
         while (currentCoroutineContext().isActive) {
-            val selectedCodes = selectedAssetsRepository.getSelectedAssets()
+            val result = selectedAssetsRepository.getSelectedAssets()
+                .flatMap { fxRateRepository.refreshFxRates(it) }
 
-            when (val result = fxRateRepository.refreshFxRates(selectedCodes)) {
+            when (result) {
                 is Either.Left -> {
                     emit(State.Failed(Exception(result.value.exception)))
                     break
