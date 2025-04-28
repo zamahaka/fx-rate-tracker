@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,6 +27,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -46,7 +49,9 @@ import com.example.fxratetracker.domain.model.SelectableAsset
 import com.example.fxratetracker.domain.repository.AssetsRepository
 import com.example.fxratetracker.domain.repository.SelectedAssetsRepository
 import com.example.fxratetracker.domain.usecase.ObserveSearchableAssets
+import com.example.fxratetracker.presentation.screens.selectassets.SelectAssetsScreen.Alert
 import com.example.fxratetracker.presentation.screens.selectassets.SelectAssetsScreen.Event.AssetSelectionChanged
+import com.example.fxratetracker.presentation.screens.selectassets.SelectAssetsScreen.Event.ClearAlert
 import com.example.fxratetracker.presentation.screens.selectassets.SelectAssetsScreen.Event.ClearQuery
 import com.example.fxratetracker.presentation.screens.selectassets.SelectAssetsScreen.Event.GoBack
 import com.example.fxratetracker.presentation.screens.selectassets.SelectAssetsScreen.Event.QueryChanged
@@ -83,8 +88,13 @@ data object SelectAssetsScreen : Screen {
         data class Loaded(
             val assets: List<SelectableAsset>,
             val query: String,
+            val alert: Alert?,
             override val eventSink: (Event.LoadedEvent) -> Unit,
         ) : State
+    }
+
+    sealed interface Alert {
+        data object SelectionSaveFailed : Alert
     }
 
     sealed interface Event : CircuitUiEvent {
@@ -97,6 +107,7 @@ data object SelectAssetsScreen : Screen {
         data object Retry : FailedEvent
 
         data object ClearQuery : LoadedEvent
+        data object ClearAlert : LoadedEvent
         data object GoBack : LoadedEvent, FailedEvent, LoadingEvent
     }
 }
@@ -124,6 +135,7 @@ class SelectAssetsPresenter(
             .collectAsRetainedState(emptyList())
         val selectedCodes by selectedAssetsRepository.observeSelectedAssets()
             .collectAsRetainedState(emptySet())
+        var alert by remember { mutableStateOf<Alert?>(null) }
 
         val selectableAssets = assets.map {
             SelectableAsset(
@@ -135,15 +147,17 @@ class SelectAssetsPresenter(
         val eventSink = wrapEventSink { event: SelectAssetsScreen.Event ->
             when (event) {
                 is AssetSelectionChanged -> launch {
-                    // TODO: Post message to the user
                     selectedAssetsRepository.saveAssetSelected(
                         id = event.id,
                         isSelected = event.isSelected,
-                    )
+                    ).onLeft {
+                        alert = Alert.SelectionSaveFailed
+                    }
                 }
 
                 is QueryChanged -> query = event.value
                 ClearQuery -> query = ""
+                ClearAlert -> alert = null
                 Retry -> loadGeneration++
                 GoBack -> navigator.pop()
             }
@@ -155,6 +169,7 @@ class SelectAssetsPresenter(
             LoadState.Loaded -> SelectAssetsScreen.State.Loaded(
                 assets = selectableAssets,
                 query = query,
+                alert = alert,
                 eventSink = eventSink,
             )
         }
@@ -194,7 +209,21 @@ fun SelectAssetsScreenUi(
     state: SelectAssetsScreen.State,
     modifier: Modifier = Modifier,
 ) {
+    val snackBarHostState = remember { SnackbarHostState() }
+    val alert = (state as? SelectAssetsScreen.State.Loaded)?.alert
+    LaunchedEffect(alert) {
+        if (alert != null) {
+            val alertMessage = when (alert) {
+                Alert.SelectionSaveFailed -> "Failed to save assets selection"
+            }
+
+            snackBarHostState.showSnackbar(alertMessage)
+            state.eventSink(ClearAlert)
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackBarHostState, Modifier.navigationBarsPadding()) },
         topBar = {
             TopAppBar(
                 title = {
@@ -344,6 +373,7 @@ private fun PreviewSelectAssetsScreenLoadedUi(
         state = SelectAssetsScreen.State.Loaded(
             assets = assets,
             query = "",
+            alert = null,
             eventSink = {},
         )
     )
