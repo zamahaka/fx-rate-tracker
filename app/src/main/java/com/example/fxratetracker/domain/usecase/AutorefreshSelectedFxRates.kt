@@ -1,6 +1,8 @@
 package com.example.fxratetracker.domain.usecase
 
 import android.util.Log
+import arrow.core.Either
+import arrow.core.flatMap
 import com.example.fxratetracker.domain.repository.FxRateRepository
 import com.example.fxratetracker.domain.repository.SelectedAssetsRepository
 import kotlinx.coroutines.CoroutineDispatcher
@@ -35,11 +37,20 @@ class AutorefreshSelectedFxRates(
         emit(State.Stale)
 
         while (currentCoroutineContext().isActive) {
-            val selectedCodes = selectedAssetsRepository.getSelectedAssets()
-            fxRateRepository.refreshFxRates(selectedCodes)
-            emit(State.Running(LocalDateTime.now()))
+            val result = selectedAssetsRepository.getSelectedAssets()
+                .flatMap { fxRateRepository.refreshFxRates(it) }
 
-            delay(period)
+            when (result) {
+                is Either.Left -> {
+                    emit(State.Failed(Exception(result.value.exception)))
+                    break
+                }
+
+                is Either.Right -> {
+                    emit(State.Running(LocalDateTime.now()))
+                    delay(period)
+                }
+            }
         }
     }.catch { e ->
         Log.e("AutorefreshSelectedFxRates", "Fx rate autorefresh failed", e)
