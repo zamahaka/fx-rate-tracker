@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,11 +18,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -38,7 +43,9 @@ import com.example.fxratetracker.domain.model.FxRate
 import com.example.fxratetracker.domain.repository.SelectedAssetsRepository
 import com.example.fxratetracker.domain.usecase.AutorefreshSelectedFxRates
 import com.example.fxratetracker.domain.usecase.ObserveSelectedFxRates
+import com.example.fxratetracker.presentation.screens.fxratelist.FxRateListScreen.Alert
 import com.example.fxratetracker.presentation.screens.fxratelist.FxRateListScreen.AutorefreshState
+import com.example.fxratetracker.presentation.screens.fxratelist.FxRateListScreen.Event.ClearAlert
 import com.example.fxratetracker.presentation.screens.fxratelist.FxRateListScreen.Event.RemoveRate
 import com.example.fxratetracker.presentation.screens.fxratelist.FxRateListScreen.Event.RestartAutorefresh
 import com.example.fxratetracker.presentation.screens.fxratelist.FxRateListScreen.Event.SelectAssets
@@ -63,6 +70,7 @@ data object FxRateListScreen : Screen {
     data class State(
         val fxRates: List<FxRate>,
         val autorefreshState: AutorefreshState,
+        val alert: Alert?,
         val eventSink: (Event) -> Unit,
     ) : CircuitUiState
 
@@ -72,10 +80,15 @@ data object FxRateListScreen : Screen {
         data object Failed : AutorefreshState
     }
 
+    sealed interface Alert {
+        data object FailedToRemoveRate : Alert
+    }
+
     sealed interface Event : CircuitUiEvent {
         data object SelectAssets : Event
         data object RestartAutorefresh : Event
         data class RemoveRate(val rate: FxRate) : Event
+        data object ClearAlert : Event
     }
 }
 
@@ -90,22 +103,24 @@ class FxRateListPresenter(
     @Composable
     override fun present(): FxRateListScreen.State {
         var autorefreshGeneration by remember { mutableIntStateOf(0) }
-        val autoRefreshState by remember(autorefreshGeneration) { autorefreshSelectedFxRates() }.collectAsRetainedState(
-            AutorefreshSelectedFxRates.State.Stale
-        )
-
+        val autoRefreshState by remember(autorefreshGeneration) { autorefreshSelectedFxRates() }
+            .collectAsRetainedState(AutorefreshSelectedFxRates.State.Stale)
         val rates by remember { observeSelectedRates() }.collectAsRetainedState(emptyList())
+        var alert by remember { mutableStateOf<Alert?>(null) }
 
         val eventSink = wrapEventSink { event: FxRateListScreen.Event ->
             when (event) {
                 SelectAssets -> navigator.goTo(SelectAssetsScreen)
                 RestartAutorefresh -> autorefreshGeneration++
                 is RemoveRate -> launch {
-                    // TODO: Post message to the user
                     selectedAssetsRepository.saveAssetSelected(
                         event.rate.referenceAsset.code, false
-                    )
+                    ).onLeft {
+                        alert = Alert.FailedToRemoveRate
+                    }
                 }
+
+                ClearAlert -> alert = null
             }
         }
 
@@ -118,6 +133,7 @@ class FxRateListPresenter(
                     refreshedAt = ars.refreshTime,
                 )
             },
+            alert = alert,
             eventSink = eventSink,
         )
     }
@@ -151,7 +167,21 @@ fun FxRateListScreenUi(
     state: FxRateListScreen.State,
     modifier: Modifier = Modifier,
 ) {
+    val snackBarHostState = remember { SnackbarHostState() }
+    val alert = state.alert
+    LaunchedEffect(alert) {
+        if (alert != null) {
+            val alertMessage = when (alert) {
+                Alert.FailedToRemoveRate -> "Failed to remove rate"
+            }
+
+            snackBarHostState.showSnackbar(alertMessage)
+            state.eventSink(ClearAlert)
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackBarHostState, Modifier.navigationBarsPadding()) },
         topBar = {
             TopAppBar(
                 title = { Text("Exchange Rates") },
@@ -243,6 +273,7 @@ private fun PreviewFxRateListScreenUi(
         state = FxRateListScreen.State(
             fxRates = fxRates,
             autorefreshState = AutorefreshState.Stale,
+            alert = null,
             eventSink = {},
         )
     )
